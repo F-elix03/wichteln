@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wichtel-Auslosung</title>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Grenze+Gotisch:wght@500;700&family=Kalam:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: eine schmale Spalte wie ein Wunschzettel. Tannennacht als Bühne,
+     Papieranhänger als Inhalt, Siegelrot nur für das Ziehen und Öffnen der Lose. */
+  --nacht:#0b211a;
+  --tanne:#14362a;
+  --tanne-hell:#1f4c3c;
+  --schnee:#f4f0e6;
+  --nebel:#a8c0b3;
+  --papier:#f3e8d2;
+  --papier-kante:#cdbb97;
+  --tinte:#2b2119;
+  --tinte-leise:#66574a;
+  --siegel:#c4281f;
+  --siegel-dunkel:#8f170f;
+  --gold:#e6bd62;
+  --warn:#f6a35c;
+  --font-display:"Grenze Gotisch","Old English Text MT","Palatino Linotype",Georgia,serif;
+  --font-body:"Alegreya Sans","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --font-hand:"Kalam","Segoe Print","Bradley Hand","Comic Sans MS",cursive;
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  min-height:100%;
+  background:radial-gradient(120% 440px at 50% -90px,var(--tanne-hell) 0%,rgba(31,76,60,0) 70%) no-repeat,var(--nacht);
+  color:var(--schnee);
+  font:400 17px/1.45 var(--font-body);
+}
+#schnee{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.kordel{position:relative;z-index:1;height:6px;background:repeating-linear-gradient(135deg,var(--siegel) 0 7px,var(--schnee) 7px 14px)}
+.seite{position:relative;z-index:1;max-width:34rem;margin:0 auto;padding:0 18px 64px;display:flex;flex-direction:column;gap:30px}
+
+/* Kopf */
+.kopf{position:relative;padding-top:30px}
+.jahr{margin:0 0 4px;font-size:.8rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:clamp(3.4rem,17vw,5.8rem);line-height:.95;letter-spacing:.005em}
+h1::first-letter{color:var(--gold)}
+.lede{margin:14px 0 0;max-width:31ch;color:var(--nebel);font-size:1.08rem}
+.haenger{position:absolute;right:6px;top:0;display:grid;justify-items:center;color:var(--gold)}
+.haenger::before{content:"";width:1px;height:20px;background:currentColor;opacity:.7}
+.haenger svg{width:46px;height:46px;display:block}
+
+h2{margin:0;font-family:var(--font-display);font-weight:500;font-size:1.95rem;line-height:1.1;text-wrap:balance}
+h3{margin:0;font-size:.82rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+p{margin:0}
+.ansicht{display:grid;gap:20px}
+.leiser{color:var(--nebel)}
+
+/* Eingaben */
+label{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--nebel)}
+input[type=text],select{
+  font:500 17px/1.2 var(--font-body);
+  color:var(--schnee);
+  background-color:rgba(244,240,230,.07);
+  border:1.5px solid rgba(244,240,230,.3);
+  border-radius:8px;
+  height:48px;
+  padding:0 12px;
+  width:100%;
+  min-width:0;
+}
+input::placeholder{color:rgba(168,192,179,.75)}
+select{
+  appearance:none;-webkit-appearance:none;
+  padding-right:34px;
+  text-overflow:ellipsis;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23e6bd62' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:12px 8px;
+}
+option{color:#1b1b1b;background:#fff}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.eintragen{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 10px;padding:16px;background:var(--tanne);border:1px solid rgba(230,189,98,.3);border-radius:10px}
+.feld{display:grid;gap:5px;min-width:0}
+.feld--name{grid-column:1/-1}
+.feld small{color:var(--nebel);font-size:.88rem}
+.eintragen .knopf{align-self:end}
+
+/* Knöpfe */
+.knopf{
+  appearance:none;-webkit-appearance:none;border:0;border-radius:8px;
+  min-height:48px;padding:0 18px;
+  font:700 1.05rem/1.1 var(--font-body);
+  display:inline-flex;align-items:center;justify-content:center;text-align:center;
+  cursor:pointer;
+}
+.knopf--siegel{width:100%;min-height:58px;font-size:1.25rem;font-weight:800;background:var(--siegel);color:#fff;box-shadow:0 4px 0 var(--siegel-dunkel)}
+.knopf--siegel:active{transform:translateY(2px);box-shadow:0 2px 0 var(--siegel-dunkel)}
+.knopf--siegel:disabled{background:#3f4a43;color:#b4c0b8;box-shadow:none;cursor:not-allowed;transform:none}
+.knopf--papier{background:var(--papier);color:var(--tinte)}
+.knopf--umriss{background:transparent;color:var(--gold);box-shadow:inset 0 0 0 1.5px var(--gold)}
+.knopf--tanne{background:var(--tanne);color:var(--schnee);width:100%;min-height:54px}
+.knopf--leise{background:transparent;color:var(--nebel);text-decoration:underline;text-underline-offset:4px;padding:0 6px;font-weight:500}
+.knopf--klein{width:auto;min-height:44px;font-size:1rem;font-weight:700}
+.knopf--siegel.knopf--klein{box-shadow:0 3px 0 var(--siegel-dunkel)}
+
+/* Beispielhinweis */
+.beispiel{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border:1.5px dashed rgba(230,189,98,.6);border-radius:10px}
+.beispiel p{flex:1 1 13rem}
+
+/* Bündel und Anhänger */
+#bundles{display:grid;gap:22px}
+.buendel{display:grid;gap:8px;padding-left:12px;border-left:2px solid var(--band,var(--nebel))}
+.buendel--ohne{border-left-style:dashed}
+.buendel-kopf{display:flex;align-items:center;gap:10px;min-height:44px}
+.buendel-titel{flex:1;font-weight:700;font-size:1.1rem}
+input[type=text].gruppenname{flex:1;height:40px;padding:0 2px;border:0;border-bottom:1.5px dashed rgba(168,192,179,.55);border-radius:0;background:transparent;font-weight:700;font-size:1.1rem}
+.anzahl{flex:none;min-width:26px;height:26px;padding:0 8px;border-radius:99px;display:grid;place-items:center;background:var(--band,var(--nebel));color:var(--nacht);font-size:.88rem;font-weight:800;font-variant-numeric:tabular-nums}
+.leise-knopf{flex:none;appearance:none;-webkit-appearance:none;background:none;border:0;min-height:44px;padding:0 4px;color:var(--nebel);font:500 .95rem var(--font-body);text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.anhaenger-liste,.lose,.alle{list-style:none;margin:0;padding:0}
+.anhaenger-liste{display:grid;gap:6px}
+.anhaenger{
+  display:flex;align-items:center;gap:6px;
+  min-height:54px;padding:5px 2px 5px 15px;
+  background:var(--papier);color:var(--tinte);
+  clip-path:polygon(13px 0,100% 0,100% 100%,13px 100%,0 calc(100% - 13px),0 13px);
+}
+.loch{flex:none;width:11px;height:11px;margin-right:4px;border-radius:50%;background:var(--nacht);box-shadow:0 0 0 3px var(--band,var(--papier-kante))}
+.anhaenger input[type=text].person-name{flex:1;height:40px;padding:0 4px;border:0;border-bottom:1.5px dashed transparent;border-radius:0;background:transparent;color:var(--tinte);font-weight:700;font-size:1.08rem}
+.anhaenger input[type=text].person-name:focus{border-bottom-color:var(--tinte-leise)}
+.anhaenger select.person-gruppe{
+  flex:0 1 8.6rem;width:auto;height:40px;padding:0 26px 0 9px;
+  font-size:16px;color:var(--tinte);
+  background-color:rgba(255,255,255,.5);border-color:var(--papier-kante);border-radius:6px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232b2119' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:right 9px center;background-size:10px 7px;
+}
+.weg{flex:none;width:42px;height:42px;appearance:none;-webkit-appearance:none;background:none;border:0;color:var(--tinte-leise);font:400 1.6rem/1 var(--font-body);cursor:pointer}
+.anhaenger :focus-visible{outline-color:var(--tinte);outline-offset:1px}
+.leer{color:var(--nebel);font-size:.98rem}
+.gruppen-zeile{display:grid;gap:10px}
+
+/* Ziehen */
+.ziehen{display:grid;gap:12px;padding-top:22px;border-top:1px solid rgba(244,240,230,.16)}
+.summe{font-weight:700;font-variant-numeric:tabular-nums}
+.problem{padding:10px 12px 10px 14px;border-left:3px solid var(--warn);background:rgba(246,163,92,.1);color:#ffd9b8;border-radius:0 6px 6px 0}
+.rueckfrage{display:grid;gap:10px;padding:12px 14px;border:1.5px solid rgba(244,240,230,.3);border-radius:10px}
+.rueckfrage-knoepfe{display:flex;flex-wrap:wrap;gap:10px}
+.unten{display:flex;justify-content:flex-start}
+
+/* Lose */
+.fortschritt{display:grid;gap:8px;font-weight:700;font-variant-numeric:tabular-nums}
+.balken{height:6px;border-radius:99px;background:rgba(244,240,230,.16);overflow:hidden}
+.balken span{display:block;height:100%;width:0;background:var(--gold);border-radius:99px}
+.lose{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 14px}
+.lose li{display:grid}
+.los{
+  position:relative;width:100%;min-height:112px;
+  display:grid;grid-template-rows:1fr 1fr;
+  appearance:none;-webkit-appearance:none;border:0;border-radius:3px;
+  padding:0;text-align:left;cursor:pointer;
+  background:linear-gradient(to bottom,var(--papier) 0 calc(50% - 1px),rgba(43,33,25,.22) calc(50% - 1px) 50%,#eadbbd 50% 100%);
+  color:var(--tinte);
+  font-family:var(--font-body);
+  box-shadow:0 8px 16px rgba(0,0,0,.4);
+  transform:rotate(var(--dreh,0deg));
+}
+.los-name{align-self:center;padding:8px 12px;font-weight:800;font-size:1.15rem;line-height:1.15;overflow-wrap:anywhere}
+.los-status{align-self:center;padding:8px 12px;font-size:.92rem;font-weight:500;color:var(--tinte-leise)}
+.siegel{
+  position:absolute;right:12px;top:50%;margin-top:-20px;
+  width:40px;height:40px;border-radius:50%;
+  display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 30%,#e2564b,var(--siegel) 55%,var(--siegel-dunkel));
+  color:rgba(255,255,255,.88);font-size:1rem;line-height:1;
+  box-shadow:0 2px 5px rgba(0,0,0,.45),inset 0 0 0 4px rgba(0,0,0,.13);
+}
+.los--offen{background:#b9ae98;box-shadow:none}
+.los--offen .los-status::before,.los--raus .los-status::before{content:"✓ "}
+
+/* Verteilen: verschicken oder reihum */
+.umschalter{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:10px;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.umschalter button{appearance:none;-webkit-appearance:none;border:0;border-radius:7px;min-height:44px;padding:0 8px;background:transparent;color:var(--gold);font:700 1.02rem/1.1 var(--font-body);cursor:pointer}
+.umschalter button[aria-pressed="true"]{background:var(--gold);color:var(--nacht)}
+.weg-panel{display:grid;gap:18px}
+.haken{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start}
+.haken input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--gold)}
+.haken label{font-size:1.02rem;font-weight:700;letter-spacing:0;text-transform:none;color:var(--schnee)}
+.haken small{grid-column:2;color:var(--nebel);font-size:.92rem}
+.post{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.brief{display:grid;gap:10px;padding:12px 12px 12px 14px;border-radius:3px;background:var(--papier);color:var(--tinte);box-shadow:0 6px 14px rgba(0,0,0,.35)}
+.brief--fertig{background:#b9ae98;box-shadow:none}
+.brief-kopf{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px}
+.brief-name{font-weight:800;font-size:1.15rem;line-height:1.15;overflow-wrap:anywhere}
+.brief-status{font-size:.92rem;font-weight:500;color:var(--tinte)}
+.brief-knoepfe{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.brief :focus-visible{outline-color:var(--tinte)}
+a.knopf{text-decoration:none}
+.knopf--tinte{background:transparent;color:var(--tinte);box-shadow:inset 0 0 0 1.5px var(--tinte-leise)}
+#send-fallback{display:grid;gap:8px}
+.wahl{border:0;margin:0;padding:0;min-width:0;display:grid;gap:12px}
+.wahl legend{padding:0;margin-bottom:10px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--nebel)}
+
+/* Los am eigenen Handy: Ansicht für alle, die einen Los-Link bekommen haben */
+.zettel.zettel--inline{position:static;width:100%;max-width:none;max-height:none;height:auto;margin:0;overflow:visible;box-shadow:0 12px 28px rgba(0,0,0,.45)}
+.einloesen summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:4px}
+.einloesen summary::-webkit-details-marker{display:none}
+.einloesen-form{display:grid;gap:8px;padding:4px 0 6px}
+.einloesen-form .knopf{justify-self:start}
+.aktionen{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.orga{display:grid;gap:12px;padding-top:22px;border-top:1px solid rgba(244,240,230,.16)}
+.alle{border-top:1px solid rgba(244,240,230,.16)}
+.alle li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:10px 2px;border-bottom:1px solid rgba(244,240,230,.16)}
+.alle .pfeil{color:var(--nebel);font-size:.95rem}
+#all-wrap{display:grid;gap:12px}
+textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var(--schnee);background:rgba(244,240,230,.07);border:1.5px solid rgba(244,240,230,.3);border-radius:8px;padding:10px 12px}
+
+/* Der Zettel */
+.zettel{
+  position:fixed;inset:0;margin:auto;height:fit-content;
+  width:calc(100% - 36px);max-width:25rem;max-height:calc(100% - 36px);overflow:auto;
+  border:0;padding:0;border-radius:4px;
+  background:var(--papier);color:var(--tinte);
+  box-shadow:0 0 0 100vmax rgba(5,15,11,.9),0 18px 40px rgba(0,0,0,.6);
+}
+.zettel::backdrop{background:transparent}
+.zettel-seite{display:grid;justify-items:center;gap:12px;padding:30px 22px 24px;text-align:center}
+.zettel .siegel{position:static;margin:0;width:58px;height:58px;font-size:1.5rem}
+.klein{font-size:.82rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tinte-leise)}
+.zettel-name{font-family:var(--font-display);font-weight:700;font-size:clamp(2.4rem,12vw,3.2rem);line-height:1;overflow-wrap:anywhere}
+.frage{max-width:24ch;margin-bottom:6px}
+.gezogen{
+  font-family:var(--font-hand);font-weight:700;font-size:clamp(2.5rem,13vw,3.5rem);line-height:1.15;
+  margin:6px 0 20px;padding:0 6px;
+  transform:rotate(-2deg);
+  text-decoration:underline wavy var(--siegel) 2px;text-underline-offset:9px;
+  overflow-wrap:anywhere;
+}
+.zettel .knopf--leise{color:var(--tinte-leise)}
+.zettel :focus-visible{outline-color:var(--tinte)}
+.auf{animation:entfalten .55s cubic-bezier(.2,.8,.2,1) both;transform-origin:50% 0}
+@keyframes entfalten{from{transform:perspective(700px) rotateX(-86deg);opacity:.2}to{transform:none;opacity:1}}
+
+.meldung{position:fixed;z-index:6;left:16px;right:16px;bottom:16px;max-width:32rem;margin:0 auto;padding:12px 14px;border-radius:8px;background:var(--papier);color:var(--tinte);font-weight:500;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+.fuss{display:grid;gap:6px;color:var(--nebel);font-size:.92rem}
+
+@media (min-width:30rem){
+  .lose{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){
+  .auf{animation:none}
+  .knopf--siegel:active{transform:none}
+}
+</style>
+</head>
+<body>
+<canvas id="schnee" aria-hidden="true"></canvas>
+<div class="kordel" aria-hidden="true"></div>
+
+<div class="seite">
+  <header class="kopf">
+    <div class="haenger" aria-hidden="true">
+      <svg viewBox="-50 -50 100 100">
+        <g stroke="currentColor" stroke-linecap="round" fill="none">
+          <g stroke-width="3.2">
+            <line x1="-45" x2="45"/><line x1="-45" x2="45" transform="rotate(45)"/>
+            <line x1="-45" x2="45" transform="rotate(90)"/><line x1="-45" x2="45" transform="rotate(135)"/>
+          </g>
+          <g stroke-width="2">
+            <line x1="-29" x2="29" transform="rotate(22.5)"/><line x1="-29" x2="29" transform="rotate(67.5)"/>
+            <line x1="-29" x2="29" transform="rotate(112.5)"/><line x1="-29" x2="29" transform="rotate(157.5)"/>
+          </g>
+          <circle r="8" stroke-width="2.4"/>
+        </g>
+      </svg>
+    </div>
+    <p class="jahr" id="jahr">Weihnachten</p>
+    <h1>Wichteln</h1>
+    <p class="lede" id="lede">Namen eintragen, Gruppen bilden, Lose ziehen. Wer in derselben Gruppe steht, bewichtelt sich nicht gegenseitig.</p>
+  </header>
+
+  <main>
+    <section id="view-gast" class="ansicht" aria-labelledby="h-gast" hidden>
+      <h2 id="h-gast">Dein Los ist da</h2>
+      <div class="zettel zettel--inline">
+        <div id="gast-zu" class="zettel-seite">
+          <span class="siegel" aria-hidden="true">★</span>
+          <p class="klein">Los für</p>
+          <p class="zettel-name" id="gast-name"></p>
+          <p class="frage" id="gast-frage"></p>
+          <button type="button" class="knopf knopf--siegel" id="gast-open">Los öffnen</button>
+        </div>
+        <div id="gast-offen" class="zettel-seite" hidden>
+          <p class="klein" id="gast-du"></p>
+          <p class="gezogen" id="gast-wen"></p>
+          <button type="button" class="knopf knopf--tanne" id="gast-close">Wieder zufalten</button>
+        </div>
+        <div id="gast-kaputt" class="zettel-seite" hidden>
+          <p class="klein">Los nicht lesbar</p>
+          <p>Der Link ist unvollständig. Lass ihn dir noch einmal schicken und öffne ihn direkt aus der Nachricht.</p>
+        </div>
+      </div>
+      <p class="leiser">Psst, nicht weitersagen. Das Los ist nur für dich.</p>
+      <div><button type="button" class="knopf knopf--leise" id="gast-leave">Selbst eine Runde auslosen</button></div>
+    </section>
+
+    <section id="view-setup" class="ansicht" aria-labelledby="h-setup">
+      <h2 id="h-setup">Wer macht mit?</h2>
+
+      <form id="add-form" class="eintragen" autocomplete="off" novalidate>
+        <div class="feld feld--name">
+          <label for="name-input">Name</label>
+          <input id="name-input" type="text" maxlength="200" placeholder="z. B. Tante Gabi" enterkeyhint="done" autocapitalize="words">
+          <small>Mehrere auf einmal: mit Komma trennen.</small>
+        </div>
+        <div class="feld">
+          <label for="group-select">Gruppe</label>
+          <select id="group-select"></select>
+        </div>
+        <button type="submit" class="knopf knopf--papier" id="add-btn">Hinzufügen</button>
+      </form>
+
+      <div id="example-note" class="beispiel" hidden>
+        <p><strong>Beispielrunde zum Ausprobieren.</strong> Ersetze sie durch eure Namen.</p>
+        <button type="button" class="knopf knopf--umriss knopf--klein" id="clear-examples">Beispiele entfernen</button>
+      </div>
+
+      <div id="bundles"></div>
+
+      <div class="gruppen-zeile">
+        <div><button type="button" class="knopf knopf--umriss knopf--klein" id="new-group">+ Neue Gruppe</button></div>
+        <p class="leiser">Gruppen sind zum Beispiel Paare oder Haushalte. Tippe auf einen Namen, um ihn zu ändern.</p>
+      </div>
+
+      <div class="ziehen">
+        <p class="summe" id="summe"></p>
+        <p class="problem" id="problem" role="status" hidden></p>
+        <p class="problem" id="hinweis" role="status" hidden></p>
+        <button type="button" class="knopf knopf--umriss" id="to-lots-btn" hidden>Zurück zu den Losen</button>
+        <button type="button" class="knopf knopf--siegel" id="draw-btn">Lose ziehen</button>
+      </div>
+
+      <div class="unten">
+        <button type="button" class="knopf knopf--leise" id="clear-all">Ganze Runde löschen</button>
+      </div>
+    </section>
+
+    <section id="view-lots" class="ansicht" aria-labelledby="h-lots" hidden>
+      <h2 id="h-lots">Die Lose liegen bereit</h2>
+      <div class="umschalter" role="group" aria-label="Lose verteilen">
+        <button type="button" id="mode-send" aria-pressed="true">Verschicken</button>
+        <button type="button" id="mode-pass" aria-pressed="false">Handy reihum</button>
+      </div>
+      <div class="fortschritt">
+        <span id="fortschritt-text" role="status"></span>
+        <div class="balken" aria-hidden="true"><span id="balken"></span></div>
+      </div>
+
+      <div id="panel-send" class="weg-panel">
+        <fieldset class="wahl">
+          <legend>Was verschickst du?</legend>
+          <div class="haken">
+            <input type="radio" name="kind" id="kind-link" value="link" checked>
+            <label for="kind-link">Los zum Öffnen</label>
+            <small>Ein Link zum versiegelten Los, wie bei „Handy reihum“. Jede Person öffnet es am eigenen Handy.</small>
+          </div>
+          <div class="haken">
+            <input type="radio" name="kind" id="kind-text" value="text">
+            <label for="kind-text">Nur Text</label>
+            <small>Das Los steht direkt in der Nachricht. Geht immer, ohne Konto und ohne eigene Webseite.</small>
+          </div>
+        </fieldset>
+
+        <div id="link-opts" class="weg-panel">
+          <div id="link-claude" class="weg-panel">
+            <p class="problem">Über den Claude-Link können nur Personen mit Claude-Konto ihr Los öffnen. Ohne Konto klappt es, wenn diese Seite als normale Webseite im Netz liegt. Trag dann deren Adresse hier ein.</p>
+            <div class="feld">
+              <label for="base-input">Adresse der Seite</label>
+              <input id="base-input" type="text" inputmode="url" maxlength="300" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+              <small>Die Los-Links führen auf diese Adresse.</small>
+            </div>
+          </div>
+          <p id="link-self" class="leiser" hidden>Die Los-Links führen direkt auf diese Seite. Zum Öffnen braucht niemand ein Konto oder eine App.</p>
+        </div>
+
+        <div id="text-opts" class="haken" hidden>
+          <input type="checkbox" id="hide-input" checked>
+          <label for="hide-input">Namen in der Nachricht verstecken</label>
+          <small>Das Los steht dann weit unten im Text, zwischen vielen Zeilen Geschenkpapier. So liest du beim Verschicken nicht mit.</small>
+        </div>
+
+        <div class="feld">
+          <label for="note-input">Zusatz für alle (optional)</label>
+          <input id="note-input" type="text" maxlength="160" placeholder="z. B. Budget 15 €, Übergabe an Heiligabend" enterkeyhint="done" autocomplete="off">
+        </div>
+        <p class="leiser" id="send-intro"></p>
+        <ul class="post" id="post"></ul>
+        <div id="send-fallback" hidden>
+          <p id="send-fallback-msg" role="status"></p>
+          <textarea id="send-fallback-text" aria-label="Nachricht zum Kopieren" readonly></textarea>
+        </div>
+        <p class="leiser">Dein eigenes Los öffnest du unter „Handy reihum“.</p>
+      </div>
+
+      <div id="panel-pass" class="weg-panel" hidden>
+        <p class="leiser">Reicht das Handy reihum. Jede Person tippt auf ihren Namen und sieht nur ihr eigenes Los.</p>
+        <ul class="lose" id="lose"></ul>
+      </div>
+
+      <div class="aktionen">
+        <button type="button" class="knopf knopf--umriss" id="redraw-btn">Neu auslosen</button>
+        <button type="button" class="knopf knopf--leise" id="edit-btn">Runde bearbeiten</button>
+      </div>
+
+      <section class="orga" aria-labelledby="h-orga">
+        <h3 id="h-orga">Für die Organisation</h3>
+        <p class="leiser">Die Liste verrät, wer wen bewichtelt. Öffne sie nur, wenn du selbst nicht mitziehst oder jemand sein Los vergessen hat.</p>
+        <div><button type="button" class="knopf knopf--umriss knopf--klein" id="show-all-btn">Alle Lose anzeigen</button></div>
+        <div id="all-wrap" hidden>
+          <ol class="alle" id="all-list"></ol>
+          <div class="aktionen">
+            <button type="button" class="knopf knopf--papier knopf--klein" id="copy-btn">Liste kopieren</button>
+            <button type="button" class="knopf knopf--leise" id="hide-all-btn">Wieder verbergen</button>
+          </div>
+          <p id="copy-msg" role="status" hidden></p>
+          <textarea id="copy-text" aria-label="Liste zum Kopieren" readonly hidden></textarea>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="fuss" id="fuss">
+    <p>Die Runde und die Lose sind nur auf diesem Gerät gespeichert. Verschickt wird nur, was du selbst in WhatsApp absendest.</p>
+    <details class="einloesen">
+      <summary>Los-Link bekommen, aber kein Los zu sehen?</summary>
+      <form id="code-form" class="einloesen-form" novalidate>
+        <label for="code-input">Link aus der Nachricht</label>
+        <input id="code-input" type="text" placeholder="Link hier einfügen" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="submit" class="knopf knopf--umriss knopf--klein">Los zeigen</button>
+      </form>
+    </details>
+  </footer>
+</div>
+
+<dialog id="los-dialog" class="zettel" aria-labelledby="dlg-name">
+  <div id="dlg-zu" class="zettel-seite">
+    <span class="siegel" aria-hidden="true">★</span>
+    <p class="klein">Los für</p>
+    <p class="zettel-name" id="dlg-name"></p>
+    <p class="frage" id="dlg-frage"></p>
+    <button type="button" class="knopf knopf--siegel" id="dlg-open">Los öffnen</button>
+    <button type="button" class="knopf knopf--leise" id="dlg-cancel">Doch nicht</button>
+  </div>
+  <div id="dlg-offen" class="zettel-seite" hidden>
+    <p class="klein" id="dlg-du"></p>
+    <p class="gezogen" id="dlg-wen"></p>
+    <button type="button" class="knopf knopf--tanne" id="dlg-close">Zufalten und weitergeben</button>
+  </div>
+</dialog>
+
+<p id="meldung" class="meldung" role="status" hidden></p>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORE_KEY = 'wichteln-v1';
+  const BAENDER = ['#e2574c', '#e6bd62', '#7cc5d9', '#e895b6', '#9fd18b', '#f29a52', '#b9a0ea', '#f4f0e6'];
+  const $ = (id) => document.getElementById(id);
+
+  let state = null;
+  let notice = '';
+  let showAll = false;
+  let current = null;
+  let toastTimer = 0;
+  let year = new Date().getFullYear();
+  let manualToken = '';
+  let dismissed = '';
+  let guestLot = null;
+
+  // Adresse dieser Seite, an die der Los-Code angehängt wird. Im Verschicken-Bereich änderbar.
+  const DEFAULT_BASE = 'https://claude.ai/artifact/U88btDR53wtgoYpHeKAdsF';
+  // Liegt die Seite als normale Webseite im Netz (nicht eingebettet), kennt sie ihre eigene Adresse.
+  function ownAddress() {
+    try {
+      if (window.top === window.self && /^https?:$/.test(location.protocol)) return location.origin + location.pathname;
+    } catch (e) { /* eingebettet: Adresse unbekannt */ }
+    return '';
+  }
+  const SELF = ownAddress();
+  const LEDE = 'Namen eintragen, Gruppen bilden, Lose ziehen. Wer in derselben Gruppe steht, bewichtelt sich nicht gegenseitig.';
+  const LEDE_GAST = 'Hier liegt dein persönliches Los für die Wichtelrunde.';
+
+  /* draw:start */
+  // Zufallszahlen kommen vorrätig aus dem Kryptogenerator des Browsers.
+  const pool = new Uint32Array(512);
+  let poolAt = pool.length;
+  function randInt(n) {
+    const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+    if (!c) return Math.floor(Math.random() * n);
+    const limit = Math.floor(0x100000000 / n) * n;
+    let x;
+    do {
+      if (poolAt >= pool.length) { c.getRandomValues(pool); poolAt = 0; }
+      x = pool[poolAt++];
+    } while (x >= limit);
+    return x % n;
+  }
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = randInt(i + 1);
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Wer denselben Schlüssel hat, darf sich nicht ziehen. Ohne Gruppe ist jede Person ihre eigene.
+  function groupKey(p) { return p.group ? 'g:' + p.group : 'p:' + p.id; }
+
+  function checkRound(people, groups) {
+    const n = people.length;
+    if (n < 3) return { ok: false, reason: 'few', missing: 3 - n };
+    const counts = {};
+    people.forEach((p) => { if (p.group) counts[p.group] = (counts[p.group] || 0) + 1; });
+    for (const g of groups) {
+      const size = counts[g.id] || 0;
+      if (size * 2 > n) return { ok: false, reason: 'big', group: g, size: size, total: n };
+    }
+    return { ok: true };
+  }
+
+  function drawLots(people) {
+    const n = people.length;
+    const keys = people.map(groupKey);
+    const idx = people.map((_, i) => i);
+    const toPairs = (perm) => {
+      const out = {};
+      people.forEach((p, i) => { out[p.id] = people[perm[i]].id; });
+      return out;
+    };
+
+    // 1) Zufällige Reihenfolge mischen und nur gültige behalten: jede erlaubte Verteilung ist gleich wahrscheinlich.
+    for (let t = 0; t < 4000; t++) {
+      const perm = shuffle(idx.slice());
+      let ok = true;
+      for (let i = 0; i < n; i++) { if (keys[i] === keys[perm[i]]) { ok = false; break; } }
+      if (ok) return toPairs(perm);
+    }
+
+    // 2) Bei sehr engen Gruppen: zufällige Zuordnung über Tauschketten, findet immer eine Lösung, wenn es eine gibt.
+    const giverOf = new Array(n).fill(-1);
+    const adj = people.map((_, i) => shuffle(idx.filter((j) => keys[j] !== keys[i])));
+    const tryGiver = (i, seen) => {
+      for (const j of adj[i]) {
+        if (seen[j]) continue;
+        seen[j] = true;
+        if (giverOf[j] === -1 || tryGiver(giverOf[j], seen)) { giverOf[j] = i; return true; }
+      }
+      return false;
+    };
+    for (const i of shuffle(idx.slice())) {
+      if (!tryGiver(i, new Array(n).fill(false))) return null;
+    }
+    const perm = new Array(n);
+    giverOf.forEach((g, r) => { perm[g] = r; });
+    return toPairs(perm);
+  }
+  /* draw:end */
+
+  /* token:start */
+  // Ein Los als Link-Anhang: "los-" plus Kleinbuchstaben und Ziffern. Verschleiert, damit man
+  // beim Verschicken nicht mitliest. Das ist keine Verschlüsselung: Wer den Link hat, kann das Los öffnen.
+  const B32 = 'abcdefghijklmnopqrstuvwxyz234567';
+
+  function toB32(bytes) {
+    let bits = 0, val = 0, out = '';
+    for (const b of bytes) {
+      val = (val << 8) | b;
+      bits += 8;
+      while (bits >= 5) { out += B32[(val >>> (bits - 5)) & 31]; bits -= 5; }
+      val &= (1 << bits) - 1;
+    }
+    if (bits > 0) out += B32[(val << (5 - bits)) & 31];
+    return out;
+  }
+
+  function fromB32(str) {
+    let bits = 0, val = 0;
+    const out = [];
+    for (const ch of str) {
+      const i = B32.indexOf(ch);
+      if (i < 0) return null;
+      val = (val << 5) | i;
+      bits += 5;
+      if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; }
+      val &= (1 << bits) - 1;
+    }
+    return out;
+  }
+
+  function keystream(hi, lo) {
+    let s = ((((hi << 8) | lo) + 0x9e3779b9) >>> 0) || 1;
+    const next = () => {
+      s ^= s << 13; s >>>= 0;
+      s ^= s >>> 17;
+      s ^= s << 5; s >>>= 0;
+      return s & 255;
+    };
+    for (let i = 0; i < 6; i++) next();
+    return next;
+  }
+
+  function checksum(bytes) {
+    let c = 7;
+    bytes.forEach((b) => { c = (c * 31 + b) & 0xffff; });
+    return [c >>> 8, c & 255];
+  }
+
+  function encodeLot(giver, receiver, salt16) {
+    const body = Array.from(new TextEncoder().encode(giver + '\u001f' + receiver));
+    const hi = (salt16 >>> 8) & 255, lo = salt16 & 255;
+    const next = keystream(hi, lo);
+    const plain = body.concat(checksum(body));
+    return 'los-' + toB32([hi, lo].concat(plain.map((b) => b ^ next())));
+  }
+
+  function decodeLot(token) {
+    if (typeof token !== 'string' || token.slice(0, 4) !== 'los-') return null;
+    const bytes = fromB32(token.slice(4).toLowerCase());
+    if (!bytes || bytes.length < 7) return null;
+    const next = keystream(bytes[0], bytes[1]);
+    const plain = bytes.slice(2).map((b) => b ^ next());
+    const sum = plain.splice(plain.length - 2, 2);
+    const want = checksum(plain);
+    if (sum[0] !== want[0] || sum[1] !== want[1]) return null;
+    let text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(plain)); } catch (e) { return null; }
+    const parts = text.split('\u001f');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+    return { giver: parts[0], receiver: parts[1] };
+  }
+  /* token:end */
+
+  function cleanBase(v) {
+    const s = String(v || '').trim().split('#')[0];
+    return /^https:\/\/[^\s]+$/.test(s) ? s.slice(0, 300) : '';
+  }
+  function hashToken() {
+    let h = '';
+    try { h = String(location.hash || '').replace(/^#/, '').toLowerCase(); } catch (e) { h = ''; }
+    return /^los-[a-z2-7]+$/.test(h) ? h : '';
+  }
+  function guestToken() {
+    if (manualToken) return manualToken;
+    const t = hashToken();
+    return t && t !== dismissed ? t : '';
+  }
+
+  // ---------- Hilfen ----------
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    if (attrs) {
+      for (const k in attrs) {
+        const v = attrs[k];
+        if (v === false || v == null) continue;
+        if (k === 'class') n.className = v;
+        else if (k === 'text') n.textContent = v;
+        else if (k === 'value') n.value = v;
+        else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+        else n.setAttribute(k, v === true ? '' : v);
+      }
+    }
+    kids.forEach((kid) => { if (kid != null) n.append(kid); });
+    return n;
+  }
+  function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3); }
+  function clean(s) { return String(s).replace(/\s+/g, ' ').trim().slice(0, 40); }
+  function same(a, b) { return a.toLocaleLowerCase('de') === b.toLocaleLowerCase('de'); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function groupById(id) { return state.groups.find((g) => g.id === id) || null; }
+  function personById(id) { return state.people.find((p) => p.id === id) || null; }
+  function bandOf(g) { return BAENDER[g.band % BAENDER.length]; }
+
+  function say(text) {
+    const m = $('meldung');
+    m.textContent = text;
+    m.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { m.hidden = true; }, 6000);
+  }
+
+  function confirmInline(btn, question, yesLabel, onYes) {
+    if (btn.dataset.asking) return;
+    btn.dataset.asking = '1';
+    const yes = el('button', { type: 'button', class: 'knopf knopf--siegel knopf--klein', text: yesLabel });
+    const no = el('button', { type: 'button', class: 'knopf knopf--umriss knopf--klein', text: 'Abbrechen' });
+    const box = el('div', { class: 'rueckfrage', role: 'group' },
+      el('p', { text: question }),
+      el('div', { class: 'rueckfrage-knoepfe' }, yes, no));
+    const done = () => { box.remove(); btn.hidden = false; delete btn.dataset.asking; };
+    yes.addEventListener('click', () => { done(); onYes(); });
+    no.addEventListener('click', () => { done(); btn.focus(); });
+    btn.hidden = true;
+    btn.after(box);
+    yes.focus();
+  }
+
+  // ---------- Zustand ----------
+  function exampleState() {
+    return {
+      people: [
+        { id: 'b1', name: 'Anna', group: 'bg1', ex: true },
+        { id: 'b2', name: 'Jonas', group: 'bg1', ex: true },
+        { id: 'b3', name: 'Oma Helga', group: 'bg2', ex: true },
+        { id: 'b4', name: 'Opa Karl', group: 'bg2', ex: true },
+        { id: 'b5', name: 'Lena', group: null, ex: true },
+        { id: 'b6', name: 'Tim', group: null, ex: true }
+      ],
+      groups: [
+        { id: 'bg1', name: 'Familie Bauer', band: 0, ex: true },
+        { id: 'bg2', name: 'Oma und Opa', band: 1, ex: true }
+      ],
+      draw: null,
+      view: 'setup',
+      mode: 'send',
+      kind: 'link',
+      base: DEFAULT_BASE,
+      note: '',
+      hide: true
+    };
+  }
+
+  function normalize(d) {
+    if (!d || !Array.isArray(d.people) || !Array.isArray(d.groups)) return null;
+    const groups = d.groups
+      .filter((g) => g && typeof g.id === 'string' && typeof g.name === 'string')
+      .map((g) => ({ id: g.id, name: clean(g.name) || 'Gruppe', band: Number(g.band) || 0, ex: !!g.ex }));
+    const gids = new Set(groups.map((g) => g.id));
+    const people = d.people
+      .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && clean(p.name))
+      .map((p) => ({ id: p.id, name: clean(p.name), group: gids.has(p.group) ? p.group : null, ex: !!p.ex }));
+    let draw = null;
+    if (d.draw && d.draw.pairs && typeof d.draw.pairs === 'object') {
+      const ids = people.map((p) => p.id);
+      const got = new Set();
+      const byId = {};
+      people.forEach((p) => { byId[p.id] = p; });
+      const valid = ids.length >= 3 && Object.keys(d.draw.pairs).length === ids.length && ids.every((id) => {
+        const r = byId[d.draw.pairs[id]];
+        if (!r || got.has(r.id) || groupKey(r) === groupKey(byId[id])) return false;
+        got.add(r.id);
+        return true;
+      });
+      if (valid) {
+        const seen = {};
+        const sent = {};
+        ids.forEach((id) => {
+          if (d.draw.seen && d.draw.seen[id]) seen[id] = true;
+          const how = d.draw.sent && d.draw.sent[id];
+          if (how === 'wa' || how === 'copy') sent[id] = how;
+        });
+        const salt = Number.isInteger(d.draw.salt) ? d.draw.salt & 0xffff : randInt(65536);
+        draw = { pairs: d.draw.pairs, seen: seen, sent: sent, salt: salt };
+      }
+    }
+    return {
+      people: people, groups: groups, draw: draw,
+      view: draw && d.view === 'lots' ? 'lots' : 'setup',
+      mode: d.mode === 'pass' ? 'pass' : 'send',
+      kind: d.kind === 'text' ? 'text' : 'link',
+      base: cleanBase(d.base) || DEFAULT_BASE,
+      note: typeof d.note === 'string' ? d.note.slice(0, 160) : '',
+      hide: d.hide !== false
+    };
+  }
+
+  function readStore() {
+    try { return normalize(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ohne Speicher läuft alles weiter */ }
+  }
+  function touch() {
+    if (state.draw) {
+      state.draw = null;
+      notice = 'Die Runde hat sich geändert. Die bisherige Auslosung gilt nicht mehr.';
+    }
+  }
+
+  // ---------- Runde zusammenstellen ----------
+  function fillGroupOptions(sel, value, withNew) {
+    sel.replaceChildren(el('option', { value: '', text: 'Ohne Gruppe' }));
+    state.groups.forEach((g) => sel.append(el('option', { value: g.id, text: g.name })));
+    if (withNew) sel.append(el('option', { value: '__neu', text: '+ Neue Gruppe' }));
+    sel.value = value && groupById(value) ? value : '';
+  }
+
+  function addGroup() {
+    const used = new Set(state.groups.map((g) => g.band));
+    let band = 0;
+    while (used.has(band) && band < BAENDER.length) band++;
+    if (band >= BAENDER.length) band = state.groups.length % BAENDER.length;
+    let n = state.groups.length + 1;
+    while (state.groups.some((g) => g.name === 'Gruppe ' + n)) n++;
+    const g = { id: uid(), name: 'Gruppe ' + n, band: band };
+    state.groups.push(g);
+    return g;
+  }
+
+  function renameGroup(g, input) {
+    const v = clean(input.value).slice(0, 30);
+    if (!v) { input.value = g.name; return; }
+    g.name = v;
+    input.value = v;
+    save();
+    document.querySelectorAll('option').forEach((o) => { if (o.value === g.id) o.textContent = v; });
+  }
+
+  function renamePerson(p, input) {
+    const v = clean(input.value);
+    if (!v || v === p.name) { input.value = p.name; return; }
+    if (state.people.some((q) => q !== p && same(q.name, v))) {
+      input.value = p.name;
+      say('„' + v + '“ gibt es schon. Häng zum Beispiel einen Buchstaben an.');
+      return;
+    }
+    p.name = v;
+    p.ex = false;
+    input.value = v;
+    save();
+    $('example-note').hidden = !state.people.some((q) => q.ex);
+  }
+
+  function tag(p) {
+    const name = el('input', { class: 'person-name', id: 'name-' + p.id, type: 'text', maxlength: '40', value: p.name, 'aria-label': 'Name', autocomplete: 'off', enterkeyhint: 'done' });
+    name.addEventListener('change', () => renamePerson(p, name));
+    name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });
+    const sel = el('select', { class: 'person-gruppe', id: 'group-of-' + p.id, 'aria-label': 'Gruppe von ' + p.name });
+    fillGroupOptions(sel, p.group, false);
+    sel.addEventListener('change', () => {
+      p.group = sel.value || null;
+      touch(); save(); renderSetup();
+    });
+    const weg = el('button', { type: 'button', class: 'weg', 'aria-label': p.name + ' entfernen', text: '×' });
+    weg.addEventListener('click', () => {
+      state.people = state.people.filter((q) => q.id !== p.id);
+      touch(); save(); renderSetup();
+    });
+    return el('li', { class: 'anhaenger' }, el('span', { class: 'loch', 'aria-hidden': 'true' }), name, sel, weg);
+  }
+
+  function bundle(g, members) {
+    const sec = el('section', { class: 'buendel' + (g ? '' : ' buendel--ohne') });
+    const head = el('div', { class: 'buendel-kopf' });
+    if (g) {
+      sec.style.setProperty('--band', bandOf(g));
+      const input = el('input', { class: 'gruppenname', id: 'groupname-' + g.id, type: 'text', maxlength: '30', value: g.name, 'aria-label': 'Name der Gruppe', autocomplete: 'off', enterkeyhint: 'done' });
+      input.addEventListener('change', () => renameGroup(g, input));
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+      const off = el('button', { type: 'button', class: 'leise-knopf', text: 'Auflösen', 'aria-label': 'Gruppe auflösen' });
+      off.addEventListener('click', () => {
+        const had = state.people.some((p) => p.group === g.id);
+        state.people.forEach((p) => { if (p.group === g.id) p.group = null; });
+        state.groups = state.groups.filter((x) => x.id !== g.id);
+        if (had) touch();
+        save(); renderSetup();
+      });
+      head.append(input, el('span', { class: 'anzahl', text: String(members.length) }), off);
+    } else {
+      head.append(el('p', { class: 'buendel-titel', text: 'Ohne Gruppe' }), el('span', { class: 'anzahl', text: String(members.length) }));
+    }
+    sec.append(head);
+    if (members.length) {
+      const ul = el('ul', { class: 'anhaenger-liste' });
+      members.forEach((p) => ul.append(tag(p)));
+      sec.append(ul);
+    } else {
+      sec.append(el('p', { class: 'leer', text: 'Noch leer. Wähle diese Gruppe oben beim Eintragen aus oder verschiebe jemanden hierher.' }));
+    }
+    return sec;
+  }
+
+  function renderStatus() {
+    const n = state.people.length;
+    const used = state.groups.filter((g) => state.people.some((p) => p.group === g.id)).length;
+    const solo = state.people.filter((p) => !p.group).length;
+    const parts = [plural(n, 'Person', 'Personen')];
+    if (used) parts.push(plural(used, 'Gruppe', 'Gruppen'));
+    if (used && solo) parts.push(solo + ' ohne Gruppe');
+    $('summe').textContent = parts.join(' · ');
+
+    const chk = checkRound(state.people, state.groups);
+    let msg = '';
+    if (!chk.ok && chk.reason === 'few') {
+      msg = 'Für eine geheime Auslosung braucht ihr mindestens 3 Personen.';
+      if (n > 0) msg += chk.missing === 1 ? ' Es fehlt noch eine.' : ' Es fehlen noch ' + chk.missing + '.';
+    } else if (!chk.ok) {
+      msg = '„' + chk.group.name + '“ stellt ' + chk.size + ' von ' + chk.total + ' Personen. Eine Gruppe darf höchstens die Hälfte der Runde ausmachen, sonst bleibt für jemanden kein erlaubtes Los. Nimm weitere Personen dazu oder teile die Gruppe.';
+    }
+    $('problem').textContent = msg;
+    $('problem').hidden = !msg;
+    $('hinweis').textContent = notice;
+    $('hinweis').hidden = !notice;
+    $('draw-btn').disabled = !chk.ok;
+    $('draw-btn').textContent = state.draw ? 'Neu ziehen' : 'Lose ziehen';
+    $('to-lots-btn').hidden = !state.draw;
+  }
+
+  function renderSetup() {
+    fillGroupOptions($('group-select'), $('group-select').value, true);
+    const box = $('bundles');
+    box.replaceChildren();
+    const empty = !state.people.length && !state.groups.length;
+    if (empty) box.append(el('p', { class: 'leer', text: 'Noch niemand eingetragen. Schreib den ersten Namen oben ins Feld.' }));
+    state.groups.forEach((g) => box.append(bundle(g, state.people.filter((p) => p.group === g.id))));
+    const solo = state.people.filter((p) => !p.group);
+    if (solo.length) box.append(bundle(null, solo));
+    $('example-note').hidden = !state.people.some((p) => p.ex);
+    $('clear-all').hidden = empty;
+    renderStatus();
+  }
+
+  // ---------- Lose ----------
+  function renderAll() {
+    $('all-wrap').hidden = !showAll;
+    $('show-all-btn').hidden = showAll;
+    const ol = $('all-list');
+    ol.replaceChildren();
+    if (!showAll) {
+      $('copy-msg').hidden = true;
+      $('copy-text').hidden = true;
+      return;
+    }
+    state.people.forEach((p) => {
+      const r = personById(state.draw.pairs[p.id]);
+      ol.append(el('li', null,
+        el('span', { text: p.name }),
+        el('span', { class: 'pfeil', text: 'bewichtelt' }),
+        el('strong', { text: r ? r.name : '?' })));
+    });
+  }
+
+  function renderProgress() {
+    const n = state.people.length;
+    const count = state.people.filter((p) => state.draw.seen[p.id] || state.draw.sent[p.id]).length;
+    $('fortschritt-text').textContent = count === n
+      ? 'Alle ' + n + ' Lose sind erledigt. Frohes Wichteln!'
+      : count + ' von ' + n + ' Losen erledigt';
+    $('balken').style.width = (n ? Math.round(count / n * 100) : 0) + '%';
+  }
+
+  // Handy reihum: versiegelte Lose zum Antippen
+  function renderSlips() {
+    const list = $('lose');
+    list.replaceChildren();
+    state.people.forEach((p, i) => {
+      const open = !!state.draw.seen[p.id];
+      const sent = !open && !!state.draw.sent[p.id];
+      const b = el('button', { type: 'button', class: 'los' + (open ? ' los--offen' : '') + (sent ? ' los--raus' : ''), id: 'los-' + p.id },
+        el('span', { class: 'los-name', text: p.name }),
+        el('span', { class: 'los-status', text: open ? 'geöffnet' : sent ? 'als Nachricht' : 'versiegelt' }),
+        open ? null : el('span', { class: 'siegel', 'aria-hidden': 'true', text: '★' }));
+      b.style.setProperty('--dreh', ((((i * 37) % 7) - 3) * 0.4) + 'deg');
+      b.addEventListener('click', () => openSlip(p.id));
+      list.append(el('li', null, b));
+    });
+  }
+
+  // Verschicken: pro Person eine fertige Nachricht
+  function filler(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(i % 7 === 3 ? '🎄' : '.');
+    return out;
+  }
+
+  function messageFor(p, r, i) {
+    const note = state.note.replace(/\s+/g, ' ').trim();
+    const lines = ['🎁 Hallo ' + p.name + '!'];
+    if (state.kind !== 'text') {
+      const code = encodeLot(p.name, r.name, (state.draw.salt + i * 7919) & 0xffff);
+      lines.push('Dein Wichtel-Los für Weihnachten ' + year + ' ist da. Öffne es hier, am besten wenn niemand mitschaut:');
+      lines.push((SELF || state.base) + '#' + code);
+      if (note) lines.push(note);
+      lines.push('Psst, nicht weitersagen! 🤫');
+    } else if (state.hide) {
+      lines.push('Hier kommt dein Wichtel-Los für Weihnachten ' + year + '.');
+      if (note) lines.push(note);
+      lines.push('', '⬇️ Der Name steht weiter unten, gut eingepackt. Wisch nach unten oder tippe auf „Mehr lesen“.');
+      filler(28).forEach((l) => lines.push(l));
+      lines.push('⭐ Du bewichtelst: ' + r.name + ' ⭐');
+      filler(28).forEach((l) => lines.push(l));
+      lines.push('⬆️ Dein Los steht weiter oben in dieser Nachricht.', 'Psst, nicht weitersagen! 🤫');
+    } else {
+      lines.push('Dein Wichtel-Los für Weihnachten ' + year + ': Du bewichtelst ' + r.name + '.');
+      if (note) lines.push(note);
+      lines.push('Psst, nicht weitersagen! 🤫');
+    }
+    return lines.join('\n');
+  }
+
+  function paintBrief(id) {
+    const li = $('brief-' + id);
+    const st = $('status-' + id);
+    if (!li || !st || !state.draw) return;
+    let s = '';
+    if (state.draw.seen[id]) s = 'am Handy geöffnet';
+    else if (state.draw.sent[id] === 'wa') s = 'WhatsApp geöffnet';
+    else if (state.draw.sent[id] === 'copy') s = 'Text kopiert';
+    st.textContent = s ? '✓ ' + s : '';
+    li.classList.toggle('brief--fertig', !!s);
+  }
+
+  function markSent(id, how) {
+    if (!state.draw) return;
+    state.draw.sent[id] = how;
+    save();
+    paintBrief(id);
+    renderProgress();
+  }
+
+  function copyMessage(p, text) {
+    const ok = () => {
+      $('send-fallback').hidden = true;
+      markSent(p.id, 'copy');
+      say('Text für ' + p.name + ' kopiert. Füge ihn im Chat ein.');
+    };
+    const fail = () => {
+      const ta = $('send-fallback-text');
+      ta.value = text;
+      $('send-fallback-msg').textContent = 'Kopieren hat hier nicht geklappt. Der Text für ' + p.name + ' ist markiert, du kannst ihn von Hand kopieren.';
+      $('send-fallback').hidden = false;
+      ta.focus(); ta.select(); ta.scrollTop = 0;
+    };
+    try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+  }
+
+  function renderPost() {
+    const list = $('post');
+    list.replaceChildren();
+    if (!state.draw) return;
+    $('send-fallback').hidden = true;
+    state.people.forEach((p, i) => {
+      const r = personById(state.draw.pairs[p.id]);
+      if (!r) return;
+      const text = messageFor(p, r, i);
+      const wa = el('a', { class: 'knopf knopf--tanne knopf--klein', href: 'https://wa.me/?text=' + encodeURIComponent(text), text: 'WhatsApp', 'aria-label': 'Los für ' + p.name + ' per WhatsApp verschicken' });
+      if (SELF) { wa.target = '_blank'; wa.rel = 'noopener'; }
+      wa.addEventListener('click', () => markSent(p.id, 'wa'));
+      const copy = el('button', { type: 'button', class: 'knopf knopf--tinte knopf--klein', text: 'Text kopieren', 'aria-label': 'Nachricht für ' + p.name + ' kopieren' });
+      copy.addEventListener('click', () => copyMessage(p, text));
+      list.append(el('li', { class: 'brief', id: 'brief-' + p.id },
+        el('div', { class: 'brief-kopf' },
+          el('span', { class: 'brief-name', text: p.name }),
+          el('span', { class: 'brief-status', id: 'status-' + p.id })),
+        el('div', { class: 'brief-knoepfe' }, wa, copy)));
+      paintBrief(p.id);
+    });
+  }
+
+  function renderLots() {
+    const send = state.mode !== 'pass';
+    $('mode-send').setAttribute('aria-pressed', String(send));
+    $('mode-pass').setAttribute('aria-pressed', String(!send));
+    $('panel-send').hidden = !send;
+    $('panel-pass').hidden = send;
+    const link = state.kind !== 'text';
+    $('kind-link').checked = link;
+    $('kind-text').checked = !link;
+    $('link-opts').hidden = !link;
+    $('link-claude').hidden = !!SELF;
+    $('link-self').hidden = !SELF;
+    $('text-opts').hidden = link;
+    $('send-intro').textContent = link
+      ? 'Tippe bei jeder Person auf WhatsApp und wähle dort ihren Chat. In der Nachricht steckt der Link zu ihrem Los, du musst nur noch senden.'
+      : 'Tippe bei jeder Person auf WhatsApp und wähle dort ihren Chat. Der Text mit dem Los ist schon eingetragen, du musst nur noch senden.';
+    if (document.activeElement !== $('base-input')) $('base-input').value = state.base;
+    if (document.activeElement !== $('note-input')) $('note-input').value = state.note;
+    $('hide-input').checked = state.hide;
+    renderProgress();
+    if (send) renderPost(); else renderSlips();
+    renderAll();
+  }
+
+  // Ansicht für Empfänger: nur das eigene Los, versiegelt
+  function renderGuest(token) {
+    guestLot = decodeLot(token);
+    $('gast-kaputt').hidden = !!guestLot;
+    $('gast-zu').hidden = !guestLot;
+    $('gast-offen').hidden = true;
+    $('gast-offen').classList.remove('auf');
+    $('gast-wen').textContent = '';
+    if (!guestLot) return;
+    $('gast-name').textContent = guestLot.giver;
+    $('gast-frage').textContent = 'Bist du ' + guestLot.giver + '? Dann öffne dein Los, wenn gerade niemand mitschaut.';
+  }
+
+  function render() {
+    clearTimeout(toastTimer);
+    $('meldung').hidden = true;
+    const token = guestToken();
+    $('view-gast').hidden = !token;
+    $('fuss').hidden = !!token;
+    $('lede').textContent = token ? LEDE_GAST : LEDE;
+    if (token) {
+      $('view-setup').hidden = true;
+      $('view-lots').hidden = true;
+      renderGuest(token);
+      return;
+    }
+    const lots = state.view === 'lots' && !!state.draw;
+    if (!lots) state.view = 'setup';
+    $('view-setup').hidden = lots;
+    $('view-lots').hidden = !lots;
+    if (lots) renderLots(); else renderSetup();
+  }
+
+  function doDraw() {
+    if (!checkRound(state.people, state.groups).ok) { renderStatus(); return; }
+    const pairs = drawLots(state.people);
+    if (!pairs) { say('Mit diesen Gruppen geht die Auslosung nicht auf. Teile eine Gruppe oder nimm jemanden dazu.'); return; }
+    state.draw = { pairs: pairs, seen: {}, sent: {}, salt: randInt(65536) };
+    state.view = 'lots';
+    notice = '';
+    showAll = false;
+    save();
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- Der Zettel ----------
+  function openSlip(id) {
+    const p = personById(id);
+    if (!p || !state.draw) return;
+    current = { id: id, revealed: false };
+    $('dlg-name').textContent = p.name;
+    $('dlg-frage').textContent = (state.draw.seen[id] ? 'Dieses Los wurde schon einmal geöffnet. ' : '') + 'Schaut gerade nur ' + p.name + ' aufs Handy?';
+    $('dlg-zu').hidden = false;
+    $('dlg-offen').hidden = true;
+    $('dlg-offen').classList.remove('auf');
+    $('dlg-wen').textContent = '';
+    const d = $('los-dialog');
+    try { d.showModal(); } catch (e) { d.setAttribute('open', ''); }
+    $('dlg-open').focus();
+  }
+
+  function closeSlip() {
+    const d = $('los-dialog');
+    if (typeof d.close === 'function' && d.open) { d.close(); return; }
+    d.removeAttribute('open');
+    afterClose();
+  }
+
+  function afterClose() {
+    $('dlg-wen').textContent = '';
+    $('dlg-offen').hidden = true;
+    const was = current;
+    current = null;
+    if (!was) return;
+    if (was.revealed && state.draw) renderLots();
+    const b = $('los-' + was.id);
+    if (b) b.focus();
+  }
+
+  // ---------- Schnee ----------
+  function snow() {
+    const cv = $('schnee');
+    const ctx = cv.getContext && cv.getContext('2d');
+    if (!ctx) return;
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let w = 0, h = 0, flakes = [], last = 0, raf = 0;
+
+    function size() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.round(Math.min(70, Math.max(26, (w * h) / 15000)));
+      flakes = [];
+      for (let i = 0; i < count; i++) {
+        flakes.push({ x: Math.random() * w, y: Math.random() * h, r: 0.8 + Math.random() * 2.1, v: 9 + Math.random() * 22, s: Math.random() * 6.28, a: 0.2 + Math.random() * 0.5 });
+      }
+      paint();
+    }
+    function paint() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#f4f0e6';
+      for (const f of flakes) {
+        ctx.globalAlpha = f.a;
+        ctx.beginPath();
+        ctx.arc(f.x + Math.sin(f.s) * 7, f.y, f.r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    function step(t) {
+      const dt = Math.min(0.05, (t - last) / 1000 || 0);
+      last = t;
+      for (const f of flakes) {
+        f.y += f.v * dt;
+        f.s += dt * 0.7;
+        if (f.y > h + 4) { f.y = -4; f.x = Math.random() * w; }
+      }
+      paint();
+      raf = requestAnimationFrame(step);
+    }
+    size();
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(size, 150); });
+    if (still) return;
+    raf = requestAnimationFrame(step);
+    document.addEventListener('visibilitychange', () => {
+      cancelAnimationFrame(raf);
+      if (!document.hidden) { last = 0; raf = requestAnimationFrame(step); }
+    });
+  }
+
+  // ---------- Verdrahten ----------
+  function wire() {
+    $('add-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('name-input');
+      const names = input.value.split(/[,;\n]+/).map(clean).filter(Boolean);
+      if (!names.length) { say('Schreib zuerst einen Namen ins Feld.'); input.focus(); return; }
+      const gid = $('group-select').value;
+      const group = gid && groupById(gid) ? gid : null;
+      const doubles = [];
+      let added = 0;
+      names.forEach((n) => {
+        if (state.people.some((p) => same(p.name, n))) { doubles.push(n); return; }
+        state.people.push({ id: uid(), name: n, group: group, ex: false });
+        added++;
+      });
+      if (added) { touch(); save(); renderSetup(); }
+      input.value = doubles.join(', ');
+      if (doubles.length) {
+        say((doubles.length === 1 ? '„' + doubles[0] + '“ gibt es schon.' : doubles.length + ' Namen gibt es schon.') + ' Häng zum Beispiel einen Buchstaben an.');
+      }
+      input.focus();
+    });
+
+    $('group-select').addEventListener('change', () => {
+      if ($('group-select').value !== '__neu') return;
+      const g = addGroup();
+      save(); renderSetup();
+      $('group-select').value = g.id;
+      say('„' + g.name + '“ ist angelegt. Den Namen kannst du in der Liste ändern.');
+    });
+
+    $('new-group').addEventListener('click', () => {
+      const g = addGroup();
+      save(); renderSetup();
+      const input = $('groupname-' + g.id);
+      if (input) { input.focus(); input.select(); }
+    });
+
+    $('clear-examples').addEventListener('click', () => {
+      state.people = state.people.filter((p) => !p.ex);
+      state.groups = state.groups.filter((g) => !g.ex || state.people.some((p) => p.group === g.id));
+      touch(); save(); renderSetup();
+      $('name-input').focus();
+    });
+
+    $('clear-all').addEventListener('click', () => {
+      confirmInline($('clear-all'), 'Alle Namen, Gruppen und Lose werden gelöscht.', 'Ja, alles löschen', () => {
+        state.people = []; state.groups = []; state.draw = null; notice = '';
+        save(); renderSetup();
+      });
+    });
+
+    $('draw-btn').addEventListener('click', () => {
+      if (state.draw) confirmInline($('draw-btn'), 'Die bisherigen Lose verfallen. Alle müssen neu ziehen.', 'Ja, neu ziehen', doDraw);
+      else doDraw();
+    });
+    $('to-lots-btn').addEventListener('click', () => { state.view = 'lots'; save(); render(); window.scrollTo(0, 0); });
+
+    $('redraw-btn').addEventListener('click', () => {
+      confirmInline($('redraw-btn'), 'Die bisherigen Lose verfallen. Alle müssen neu ziehen.', 'Ja, neu ziehen', doDraw);
+    });
+    $('edit-btn').addEventListener('click', () => { state.view = 'setup'; save(); render(); window.scrollTo(0, 0); });
+
+    $('mode-send').addEventListener('click', () => { state.mode = 'send'; save(); renderLots(); });
+    $('mode-pass').addEventListener('click', () => { state.mode = 'pass'; save(); renderLots(); });
+    $('note-input').addEventListener('input', () => { state.note = $('note-input').value.slice(0, 160); save(); renderPost(); });
+    $('note-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('note-input').blur(); });
+    $('hide-input').addEventListener('change', () => { state.hide = $('hide-input').checked; save(); renderPost(); });
+    $('kind-link').addEventListener('change', () => { state.kind = 'link'; save(); renderLots(); });
+    $('kind-text').addEventListener('change', () => { state.kind = 'text'; save(); renderLots(); });
+    $('base-input').addEventListener('input', () => { state.base = cleanBase($('base-input').value) || DEFAULT_BASE; save(); renderPost(); });
+    $('base-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('base-input').blur(); });
+    $('base-input').addEventListener('change', () => {
+      if (!cleanBase($('base-input').value)) say('Das war kein vollständiger Link. Der ursprüngliche Link steht wieder drin.');
+      $('base-input').value = state.base;
+    });
+
+    // Los am eigenen Handy
+    $('gast-open').addEventListener('click', () => {
+      if (!guestLot) return;
+      $('gast-du').textContent = guestLot.giver + ', du bewichtelst';
+      $('gast-wen').textContent = guestLot.receiver;
+      $('gast-zu').hidden = true;
+      $('gast-offen').hidden = false;
+      $('gast-offen').classList.add('auf');
+      $('gast-close').focus();
+    });
+    $('gast-close').addEventListener('click', () => { renderGuest(guestToken()); $('gast-open').focus(); });
+    $('gast-leave').addEventListener('click', () => { dismissed = hashToken(); manualToken = ''; render(); window.scrollTo(0, 0); });
+    $('code-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = $('code-input').value;
+      const m = /#(los-[a-z2-7]+)/i.exec(v) || /(los-[a-z2-7]{8,})/i.exec(v);
+      const token = m ? m[1].toLowerCase() : '';
+      if (!token || !decodeLot(token)) {
+        say('In diesem Text steckt kein gültiges Los. Füge den ganzen Link aus der Nachricht ein.');
+        return;
+      }
+      $('code-input').value = '';
+      manualToken = token;
+      render();
+      window.scrollTo(0, 0);
+    });
+    window.addEventListener('hashchange', () => { manualToken = ''; render(); });
+
+    $('show-all-btn').addEventListener('click', () => {
+      confirmInline($('show-all-btn'), 'Danach kennst du alle Lose.', 'Ja, anzeigen', () => { showAll = true; renderAll(); });
+    });
+    $('hide-all-btn').addEventListener('click', () => { showAll = false; renderAll(); });
+    $('copy-btn').addEventListener('click', () => {
+      const text = ['Wichtel-Auslosung', ''].concat(state.people.map((p) => {
+        const r = personById(state.draw.pairs[p.id]);
+        return p.name + ' bewichtelt ' + (r ? r.name : '?');
+      })).join('\n');
+      const msg = $('copy-msg');
+      const ok = () => { msg.textContent = 'Liste kopiert.'; msg.hidden = false; };
+      const fail = () => {
+        const ta = $('copy-text');
+        ta.value = text; ta.hidden = false; ta.focus(); ta.select();
+        msg.textContent = 'Kopieren hat hier nicht geklappt. Der Text ist markiert, du kannst ihn von Hand kopieren.';
+        msg.hidden = false;
+      };
+      try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+    });
+
+    const d = $('los-dialog');
+    $('dlg-open').addEventListener('click', () => {
+      if (!current || !state.draw) return;
+      const p = personById(current.id);
+      const r = personById(state.draw.pairs[current.id]);
+      if (!p || !r) return;
+      $('dlg-du').textContent = p.name + ', du bewichtelst';
+      $('dlg-wen').textContent = r.name;
+      $('dlg-zu').hidden = true;
+      $('dlg-offen').hidden = false;
+      $('dlg-offen').classList.add('auf');
+      current.revealed = true;
+      state.draw.seen[current.id] = true;
+      save();
+      $('dlg-close').focus();
+    });
+    $('dlg-cancel').addEventListener('click', closeSlip);
+    $('dlg-close').addEventListener('click', closeSlip);
+    d.addEventListener('click', (e) => { if (e.target === d) closeSlip(); });
+    d.addEventListener('close', afterClose);
+  }
+
+  function start(data) {
+    state = normalize(data) || readStore() || exampleState();
+    const now = new Date();
+    year = now.getFullYear() + (now.getMonth() === 11 && now.getDate() > 26 ? 1 : 0);
+    $('jahr').textContent = 'Weihnachten ' + year;
+    wire();
+    render();
+    snow();
+  }
+
+  const hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => state);
+  if (hot && typeof hot.ready === 'function') hot.ready(start);
+  else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
