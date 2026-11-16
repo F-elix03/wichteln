@@ -284,6 +284,23 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
   </header>
 
   <main>
+    <section id="view-import" class="ansicht" aria-labelledby="h-import" hidden>
+      <h2 id="h-import">Runde übernehmen?</h2>
+      <div id="import-ok" class="weg-panel">
+        <p id="import-info"></p>
+        <p class="leiser" id="import-names"></p>
+        <p class="problem">Was auf diesem Gerät bisher eingetragen ist, wird dabei ersetzt.</p>
+        <div class="aktionen">
+          <button type="button" class="knopf knopf--siegel knopf--klein" id="import-yes">Runde übernehmen</button>
+          <button type="button" class="knopf knopf--leise" id="import-no">Abbrechen</button>
+        </div>
+      </div>
+      <div id="import-bad" class="weg-panel" hidden>
+        <p class="problem">Der Übertragungs-Link ist unvollständig. Erstelle ihn auf dem anderen Gerät neu und kopiere ihn ganz.</p>
+        <div><button type="button" class="knopf knopf--umriss knopf--klein" id="import-back">Zurück</button></div>
+      </div>
+    </section>
+
     <section id="view-gast" class="ansicht" aria-labelledby="h-gast" hidden>
       <h2 id="h-gast">Dein Los ist da</h2>
       <div class="zettel zettel--inline">
@@ -433,12 +450,27 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
     </section>
   </main>
 
+  <section id="umzug" class="orga" aria-labelledby="h-umzug">
+    <h3 id="h-umzug">Auf anderem Gerät weitermachen</h3>
+    <p class="leiser">Der Link nimmt Namen, Gruppen und die Auslosung mit. Die Lose sind darin verschleiert, beim Übertragen siehst du sie nicht.</p>
+    <div><button type="button" class="knopf knopf--umriss knopf--klein" id="move-btn">Übertragungs-Link erstellen</button></div>
+    <div id="move-wrap" class="weg-panel" hidden>
+      <textarea id="move-text" aria-label="Übertragungs-Link" readonly></textarea>
+      <div class="aktionen">
+        <button type="button" class="knopf knopf--papier knopf--klein" id="move-copy">Link kopieren</button>
+        <a class="knopf knopf--tanne knopf--klein" id="move-wa" href="#">Per WhatsApp an mich</a>
+      </div>
+      <p id="move-msg" role="status" hidden></p>
+      <p class="leiser">Öffne den Link auf dem anderen Gerät. Klappt das nicht, füge ihn dort ganz unten bei „Link einfügen“ ein.</p>
+    </div>
+  </section>
+
   <footer class="fuss" id="fuss">
     <p>Die Runde und die Lose sind nur auf diesem Gerät gespeichert. Verschickt wird nur, was du selbst in WhatsApp absendest.</p>
     <details class="einloesen">
-      <summary>Los-Link bekommen, aber kein Los zu sehen?</summary>
+      <summary>Link einfügen (Los oder Übertragung)</summary>
       <form id="code-form" class="einloesen-form" novalidate>
-        <label for="code-input">Link aus der Nachricht</label>
+        <label for="code-input">Los-Link oder Übertragungs-Link</label>
         <input id="code-input" type="text" placeholder="Link hier einfügen" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button type="submit" class="knopf knopf--umriss knopf--klein">Los zeigen</button>
       </form>
@@ -481,6 +513,9 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
   let manualToken = '';
   let dismissed = '';
   let guestLot = null;
+  let manualRound = '';
+  let dismissedRound = '';
+  let pendingRound = null;
 
   // Adresse dieser Seite, an die der Los-Code angehängt wird. Im Verschicken-Bereich änderbar.
   const DEFAULT_BASE = 'https://claude.ai/artifact/U88btDR53wtgoYpHeKAdsF';
@@ -621,25 +656,33 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
     return [c >>> 8, c & 255];
   }
 
-  function encodeLot(giver, receiver, salt16) {
-    const body = Array.from(new TextEncoder().encode(giver + '\u001f' + receiver));
+  function encodeBlob(prefix, str, salt16) {
+    const body = Array.from(new TextEncoder().encode(str));
     const hi = (salt16 >>> 8) & 255, lo = salt16 & 255;
     const next = keystream(hi, lo);
     const plain = body.concat(checksum(body));
-    return 'los-' + toB32([hi, lo].concat(plain.map((b) => b ^ next())));
+    return prefix + toB32([hi, lo].concat(plain.map((b) => b ^ next())));
   }
 
-  function decodeLot(token) {
-    if (typeof token !== 'string' || token.slice(0, 4) !== 'los-') return null;
-    const bytes = fromB32(token.slice(4).toLowerCase());
-    if (!bytes || bytes.length < 7) return null;
+  function decodeBlob(prefix, token) {
+    if (typeof token !== 'string' || token.slice(0, prefix.length) !== prefix) return null;
+    const bytes = fromB32(token.slice(prefix.length).toLowerCase());
+    if (!bytes || bytes.length < 5) return null;
     const next = keystream(bytes[0], bytes[1]);
     const plain = bytes.slice(2).map((b) => b ^ next());
     const sum = plain.splice(plain.length - 2, 2);
     const want = checksum(plain);
     if (sum[0] !== want[0] || sum[1] !== want[1]) return null;
-    let text;
-    try { text = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(plain)); } catch (e) { return null; }
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(plain)); } catch (e) { return null; }
+  }
+
+  function encodeLot(giver, receiver, salt16) {
+    return encodeBlob('los-', giver + '\u001f' + receiver, salt16);
+  }
+
+  function decodeLot(token) {
+    const text = decodeBlob('los-', token);
+    if (text == null) return null;
     const parts = text.split('\u001f');
     if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
     return { giver: parts[0], receiver: parts[1] };
@@ -655,6 +698,64 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
     try { h = String(location.hash || '').replace(/^#/, '').toLowerCase(); } catch (e) { h = ''; }
     return /^los-[a-z2-7]+$/.test(h) ? h : '';
   }
+  // Ganze Runde als Link-Anhang "runde-…", um auf einem anderen Gerät weiterzumachen
+  function exportRound() {
+    const gi = {}, pi = {};
+    state.groups.forEach((g, i) => { gi[g.id] = i; });
+    state.people.forEach((p, i) => { pi[p.id] = i; });
+    const data = {
+      v: 1,
+      g: state.groups.map((g) => [g.name, g.band]),
+      p: state.people.map((p) => [p.name, p.group ? gi[p.group] : -1]),
+      n: state.note, k: state.kind, h: state.hide ? 1 : 0, b: state.base
+    };
+    if (state.draw) {
+      data.d = state.people.map((p) => pi[state.draw.pairs[p.id]]);
+      data.s = state.draw.salt;
+      data.o = state.people.map((p) => state.draw.seen[p.id] ? 1 : state.draw.sent[p.id] === 'wa' ? 2 : state.draw.sent[p.id] === 'copy' ? 3 : 0);
+    }
+    return encodeBlob('runde-', JSON.stringify(data), randInt(65536));
+  }
+
+  function importRound(token) {
+    const text = decodeBlob('runde-', token);
+    if (text == null) return null;
+    let d;
+    try { d = JSON.parse(text); } catch (e) { return null; }
+    if (!d || d.v !== 1 || !Array.isArray(d.g) || !Array.isArray(d.p)) return null;
+    const groups = d.g.map((g, i) => ({ id: 'g' + i, name: String(g[0]), band: Number(g[1]) || 0 }));
+    const people = d.p.map((p, i) => ({ id: 'p' + i, name: String(p[0]), group: p[1] >= 0 && p[1] < groups.length ? 'g' + p[1] : null }));
+    let draw = null;
+    if (Array.isArray(d.d) && d.d.length === people.length) {
+      const pairs = {}, seen = {}, sent = {};
+      people.forEach((p, i) => {
+        pairs[p.id] = 'p' + d.d[i];
+        const o = Array.isArray(d.o) ? d.o[i] : 0;
+        if (o === 1) seen[p.id] = true;
+        if (o === 2) sent[p.id] = 'wa';
+        if (o === 3) sent[p.id] = 'copy';
+      });
+      draw = { pairs: pairs, seen: seen, sent: sent, salt: d.s };
+    }
+    const st = normalize({ people: people, groups: groups, draw: draw, view: draw ? 'lots' : 'setup', mode: 'send', kind: d.k, base: d.b, note: d.n, hide: d.h !== 0 });
+    if (!st || st.people.length !== people.length || (draw && !st.draw)) return null;
+    return st;
+  }
+
+  function hashRound() {
+    let h = '';
+    try { h = String(location.hash || '').replace(/^#/, '').toLowerCase(); } catch (e) { h = ''; }
+    return /^runde-[a-z2-7]+$/.test(h) ? h : '';
+  }
+  function roundToken() {
+    if (manualRound) return manualRound;
+    const t = hashRound();
+    return t && t !== dismissedRound ? t : '';
+  }
+  function clearHash() {
+    try { if (location.hash) location.hash = ''; } catch (e) { /* egal */ }
+  }
+
   function guestToken() {
     if (manualToken) return manualToken;
     const t = hashToken();
@@ -1103,9 +1204,29 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
     clearTimeout(toastTimer);
     $('meldung').hidden = true;
     const token = guestToken();
+    const rtok = token ? '' : roundToken();
+    pendingRound = rtok ? importRound(rtok) : null;
+    const importing = !!rtok;
     $('view-gast').hidden = !token;
-    $('fuss').hidden = !!token;
+    $('view-import').hidden = !importing;
+    $('fuss').hidden = !!token || importing;
+    $('umzug').hidden = !!token || importing;
     $('lede').textContent = token ? LEDE_GAST : LEDE;
+    if (importing) {
+      $('view-setup').hidden = true;
+      $('view-lots').hidden = true;
+      const ok = !!pendingRound;
+      $('import-ok').hidden = !ok;
+      $('import-bad').hidden = ok;
+      if (ok) {
+        const n = pendingRound.people.length;
+        const g = pendingRound.groups.length;
+        $('import-info').textContent = plural(n, 'Person', 'Personen') + (g ? ', ' + plural(g, 'Gruppe', 'Gruppen') : '') +
+          (pendingRound.draw ? '. Die Lose sind schon gezogen und kommen mit.' : '. Ausgelost ist noch nicht.');
+        $('import-names').textContent = pendingRound.people.map((p) => p.name).join(', ');
+      }
+      return;
+    }
     if (token) {
       $('view-setup').hidden = true;
       $('view-lots').hidden = true;
@@ -1312,7 +1433,16 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
     $('code-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const v = $('code-input').value;
-      const m = /#(los-[a-z2-7]+)/i.exec(v) || /(los-[a-z2-7]{8,})/i.exec(v);
+      const rm = /(runde-[a-z2-7]{8,})/i.exec(v);
+      if (rm) {
+        if (!importRound(rm[1].toLowerCase())) { say('Der Übertragungs-Link ist unvollständig. Kopiere ihn noch einmal ganz.'); return; }
+        $('code-input').value = '';
+        manualRound = rm[1].toLowerCase();
+        render();
+        window.scrollTo(0, 0);
+        return;
+      }
+      const m =/#(los-[a-z2-7]+)/i.exec(v) || /(los-[a-z2-7]{8,})/i.exec(v);
       const token = m ? m[1].toLowerCase() : '';
       if (!token || !decodeLot(token)) {
         say('In diesem Text steckt kein gültiges Los. Füge den ganzen Link aus der Nachricht ein.');
@@ -1323,7 +1453,37 @@ textarea{width:100%;min-height:9rem;font:400 16px/1.4 var(--font-body);color:var
       render();
       window.scrollTo(0, 0);
     });
-    window.addEventListener('hashchange', () => { manualToken = ''; render(); });
+    window.addEventListener('hashchange', () => { manualToken = ''; manualRound = ''; render(); });
+
+    // Übertragen
+    $('move-btn').addEventListener('click', () => {
+      const link = (SELF || state.base) + '#' + exportRound();
+      $('move-text').value = link;
+      $('move-wa').href = 'https://wa.me/?text=' + encodeURIComponent('Wichtel-Runde zum Weitermachen:\n' + link);
+      if (SELF) { $('move-wa').target = '_blank'; $('move-wa').rel = 'noopener'; }
+      $('move-msg').hidden = true;
+      $('move-wrap').hidden = false;
+      $('move-btn').textContent = 'Link neu erstellen';
+    });
+    $('move-copy').addEventListener('click', () => {
+      const ta = $('move-text');
+      const msg = $('move-msg');
+      const ok = () => { msg.textContent = 'Link kopiert.'; msg.hidden = false; };
+      const fail = () => { ta.focus(); ta.select(); msg.textContent = 'Kopieren hat hier nicht geklappt. Der Link ist markiert, kopiere ihn von Hand.'; msg.hidden = false; };
+      try { navigator.clipboard.writeText(ta.value).then(ok, fail); } catch (e) { fail(); }
+    });
+    const leaveImport = () => { dismissedRound = hashRound(); manualRound = ''; clearHash(); render(); window.scrollTo(0, 0); };
+    $('import-yes').addEventListener('click', () => {
+      if (!pendingRound) return;
+      state = pendingRound;
+      notice = '';
+      showAll = false;
+      save();
+      leaveImport();
+      say('Runde übernommen.');
+    });
+    $('import-no').addEventListener('click', leaveImport);
+    $('import-back').addEventListener('click', leaveImport);
 
     $('show-all-btn').addEventListener('click', () => {
       confirmInline($('show-all-btn'), 'Danach kennst du alle Lose.', 'Ja, anzeigen', () => { showAll = true; renderAll(); });
